@@ -3,17 +3,31 @@ import json
 TASKS_FILE = "tasks.json"
 
 
+class Task:
+    def __init__(self, text, done=False):
+        self.text = text
+        self.done = done
+
+    def to_dict(self):
+        return {"text": self.text, "done": self.done}
+
+
+def dict_to_task(data):
+    return Task(data["text"], data["done"])
+
+
 def load_tasks():
     try:
         with open(TASKS_FILE, "r") as file:
-            return json.load(file)
+            data = json.load(file)
+            return [dict_to_task(item) for item in data]
     except FileNotFoundError:
         return []
 
 
 def save_tasks(tasks):
     with open(TASKS_FILE, "w") as file:
-        json.dump(tasks, file, indent=2)
+        json.dump([task.to_dict() for task in tasks], file, indent=2)
 
 
 def prompt_nonblank(prompt):
@@ -29,7 +43,7 @@ def add_task(tasks):
         print("Task can't be blank.")
         return
 
-    tasks.append({"text": task_text, "done": False})
+    tasks.append(Task(task_text))
     print(f"Added: {task_text}")
 
 
@@ -39,8 +53,8 @@ def view_tasks(tasks):
         return
 
     for index, task in enumerate(tasks, start=1):
-        status = "x" if task["done"] else " "
-        print(f"{index}. [{status}] {task['text']}")
+        status = "x" if task.done else " "
+        print(f"{index}. [{status}] {task.text}")
 
 
 def get_valid_task_index(tasks, prompt):
@@ -68,9 +82,9 @@ def toggle_task(tasks):
     if index is None:
         return
 
-    tasks[index]["done"] = not tasks[index]["done"]
-    status = "done" if tasks[index]["done"] else "not done"
-    print(f"Marked '{tasks[index]['text']}' as {status}.")
+    tasks[index].done = not tasks[index].done
+    status = "done" if tasks[index].done else "not done"
+    print(f"Marked '{tasks[index].text}' as {status}.")
 
 
 def delete_task(tasks):
@@ -79,7 +93,7 @@ def delete_task(tasks):
         return
 
     removed = tasks.pop(index)
-    print(f"Deleted: {removed['text']}")
+    print(f"Deleted: {removed.text}")
 
 
 def edit_task(tasks):
@@ -87,12 +101,12 @@ def edit_task(tasks):
     if index is None:
         return
 
-    new_text = prompt_nonblank(f"New text for '{tasks[index]['text']}': ")
+    new_text = prompt_nonblank(f"New text for '{tasks[index].text}': ")
     if new_text is None:
         print("Task can't be blank.")
         return
 
-    tasks[index]["text"] = new_text
+    tasks[index].text = new_text
     print("Updated.")
 
 
@@ -115,7 +129,7 @@ def move_task(tasks):
 
     task = tasks.pop(from_index)
     tasks.insert(to_index, task)
-    print(f"Moved '{task['text']}' to position {to_index + 1}.")
+    print(f"Moved '{task.text}' to position {to_index + 1}.")
 
 
 def main():
