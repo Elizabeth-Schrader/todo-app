@@ -11,16 +11,16 @@ class Task:
     def to_dict(self):
         return {"text": self.text, "done": self.done}
 
-
-def dict_to_task(data):
-    return Task(data["text"], data["done"])
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data["text"], data["done"])
 
 
 def load_tasks():
     try:
         with open(TASKS_FILE, "r") as file:
             data = json.load(file)
-            return [dict_to_task(item) for item in data]
+            return [Task.from_dict(item) for item in data]
     except FileNotFoundError:
         return []
 
