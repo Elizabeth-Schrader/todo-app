@@ -16,20 +16,6 @@ class Task:
         return cls(data["text"], data["done"])
 
 
-def load_tasks():
-    try:
-        with open(TASKS_FILE, "r") as file:
-            data = json.load(file)
-            return [Task.from_dict(item) for item in data]
-    except FileNotFoundError:
-        return []
-
-
-def save_tasks(tasks):
-    with open(TASKS_FILE, "w") as file:
-        json.dump([task.to_dict() for task in tasks], file, indent=2)
-
-
 def prompt_nonblank(prompt):
     text = input(prompt).strip()
     if not text:
@@ -37,103 +23,114 @@ def prompt_nonblank(prompt):
     return text
 
 
-def add_task(tasks):
-    task_text = prompt_nonblank("Enter the new task: ")
-    if task_text is None:
-        print("Task can't be blank.")
-        return
+class TodoList:
+    def __init__(self):
+        self.tasks = []
+        self.load()
 
-    tasks.append(Task(task_text))
-    print(f"Added: {task_text}")
+    def load(self):
+        try:
+            with open(TASKS_FILE, "r") as file:
+                data = json.load(file)
+                self.tasks = [Task.from_dict(item) for item in data]
+        except FileNotFoundError:
+            self.tasks = []
 
+    def save(self):
+        with open(TASKS_FILE, "w") as file:
+            json.dump([task.to_dict() for task in self.tasks], file, indent=2)
 
-def view_tasks(tasks):
-    if not tasks:
-        print("No tasks yet!")
-        return
+    def add_task(self):
+        task_text = prompt_nonblank("Enter the new task: ")
+        if task_text is None:
+            print("Task can't be blank.")
+            return
 
-    for index, task in enumerate(tasks, start=1):
-        status = "x" if task.done else " "
-        print(f"{index}. [{status}] {task.text}")
+        self.tasks.append(Task(task_text))
+        print(f"Added: {task_text}")
 
+    def view_tasks(self):
+        if not self.tasks:
+            print("No tasks yet!")
+            return
 
-def get_valid_task_index(tasks, prompt):
-    view_tasks(tasks)
-    if not tasks:
+        for index, task in enumerate(self.tasks, start=1):
+            status = "x" if task.done else " "
+            print(f"{index}. [{status}] {task.text}")
+
+    def get_valid_task_index(self, prompt):
+        self.view_tasks()
+        if not self.tasks:
+            return None
+
+        choice = input(prompt)
+
+        if not choice.isdigit():
+            print("Please enter a number.")
+            return None
+
+        index = int(choice) - 1
+
+        if 0 <= index < len(self.tasks):
+            return index
+
+        print("That's not a valid task number.")
         return None
 
-    choice = input(prompt)
+    def toggle_task(self):
+        index = self.get_valid_task_index("Which task number do you want to toggle? ")
+        if index is None:
+            return
 
-    if not choice.isdigit():
-        print("Please enter a number.")
-        return None
+        self.tasks[index].done = not self.tasks[index].done
+        status = "done" if self.tasks[index].done else "not done"
+        print(f"Marked '{self.tasks[index].text}' as {status}.")
 
-    index = int(choice) - 1
+    def delete_task(self):
+        index = self.get_valid_task_index("Which task number do you want to delete? ")
+        if index is None:
+            return
 
-    if 0 <= index < len(tasks):
-        return index
+        removed = self.tasks.pop(index)
+        print(f"Deleted: {removed.text}")
 
-    print("That's not a valid task number.")
-    return None
+    def edit_task(self):
+        index = self.get_valid_task_index("Which task number do you want to edit? ")
+        if index is None:
+            return
 
+        new_text = prompt_nonblank(f"New text for '{self.tasks[index].text}': ")
+        if new_text is None:
+            print("Task can't be blank.")
+            return
 
-def toggle_task(tasks):
-    index = get_valid_task_index(tasks, "Which task number do you want to toggle? ")
-    if index is None:
-        return
+        self.tasks[index].text = new_text
+        print("Updated.")
 
-    tasks[index].done = not tasks[index].done
-    status = "done" if tasks[index].done else "not done"
-    print(f"Marked '{tasks[index].text}' as {status}.")
+    def move_task(self):
+        from_index = self.get_valid_task_index("Which task number do you want to move? ")
+        if from_index is None:
+            return
 
+        to_choice = input(f"Move it to which position (1-{len(self.tasks)})? ")
 
-def delete_task(tasks):
-    index = get_valid_task_index(tasks, "Which task number do you want to delete? ")
-    if index is None:
-        return
+        if not to_choice.isdigit():
+            print("Please enter a number.")
+            return
 
-    removed = tasks.pop(index)
-    print(f"Deleted: {removed.text}")
+        to_index = int(to_choice) - 1
 
+        if not (0 <= to_index < len(self.tasks)):
+            print("That's not a valid position.")
+            return
 
-def edit_task(tasks):
-    index = get_valid_task_index(tasks, "Which task number do you want to edit? ")
-    if index is None:
-        return
-
-    new_text = prompt_nonblank(f"New text for '{tasks[index].text}': ")
-    if new_text is None:
-        print("Task can't be blank.")
-        return
-
-    tasks[index].text = new_text
-    print("Updated.")
-
-
-def move_task(tasks):
-    from_index = get_valid_task_index(tasks, "Which task number do you want to move? ")
-    if from_index is None:
-        return
-
-    to_choice = input(f"Move it to which position (1-{len(tasks)})? ")
-
-    if not to_choice.isdigit():
-        print("Please enter a number.")
-        return
-
-    to_index = int(to_choice) - 1
-
-    if not (0 <= to_index < len(tasks)):
-        print("That's not a valid position.")
-        return
-
-    task = tasks.pop(from_index)
-    tasks.insert(to_index, task)
-    print(f"Moved '{task.text}' to position {to_index + 1}.")
+        task = self.tasks.pop(from_index)
+        self.tasks.insert(to_index, task)
+        print(f"Moved '{task.text}' to position {to_index + 1}.")
 
 
 def main():
-    tasks = load_tasks()
+    todo_list = TodoList()
 
     while True:
         print("\n--- To-Do List ---")
@@ -148,22 +145,22 @@ def main():
         choice = input("Choose an option: ")
 
         if choice == "1":
-            add_task(tasks)
-            save_tasks(tasks)
+            todo_list.add_task()
+            todo_list.save()
         elif choice == "2":
-            view_tasks(tasks)
+            todo_list.view_tasks()
         elif choice == "3":
-            toggle_task(tasks)
-            save_tasks(tasks)
+            todo_list.toggle_task()
+            todo_list.save()
         elif choice == "4":
-            delete_task(tasks)
-            save_tasks(tasks)
+            todo_list.delete_task()
+            todo_list.save()
         elif choice == "5":
-            edit_task(tasks)
-            save_tasks(tasks)
+            todo_list.edit_task()
+            todo_list.save()
         elif choice == "6":
-            move_task(tasks)
-            save_tasks(tasks)
+            todo_list.move_task()
+            todo_list.save()
         elif choice == "7":
             print("Goodbye!")
             break
