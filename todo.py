@@ -35,6 +35,9 @@ class TodoList:
                 self.tasks = [Task.from_dict(item) for item in data]
         except FileNotFoundError:
             self.tasks = []
+        except json.JSONDecodeError:
+            print("Warning: tasks.json is corrupted or unreadable. Starting with an empty list.")
+            self.tasks = []
 
     def save(self):
         with open(TASKS_FILE, "w") as file:
